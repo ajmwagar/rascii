@@ -43,7 +43,8 @@ impl RasciiColor {
 
                 let y = (0.2126 * rlin) + (0.7152 * glin) + (0.0722 * blin);
 
-                return (116.0 * y.powf(1.0 / 3.0) - 16.0) as u8
+                let l = (116.0 * y.powf(1.0 / 3.0) - 16.0) as u8;
+                l
             }
             RasciiColor::Grayscale(l) => {
                 *l
@@ -155,7 +156,7 @@ impl Rascii {
     pub fn from_opt(opt: &Opt) -> Result<Self, Box<dyn Error>> {
         let im: DynamicImage = image::open(&Path::new(&opt.image))?;
         let im = im.to_rgb();
-        let aspect = im.height() as f64 / im.width() as f64;
+        let aspect = im.width() as f64 / im.height() as f64;
         let height = match opt.height {
             Some(height) => height,
             None => (opt.width as f64 * aspect) as u32
