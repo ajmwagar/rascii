@@ -43,7 +43,7 @@ impl RasciiColor {
 
                 let y = (0.2126 * rlin) + (0.7152 * glin) + (0.0722 * blin);
 
-                return (116.0 * y.powf((1.0 / 3.0)) - 16.0) as u8
+                return (116.0 * y.powf(1.0 / 3.0) - 16.0) as u8
             }
             RasciiColor::Grayscale(l) => {
                 *l
