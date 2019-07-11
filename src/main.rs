@@ -8,7 +8,16 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 /// 10 Levels of grayscale
 const GSCALE_10: &[char] = &[' ','.',':','-','=','+','*','#','%','@'];
 const GSCALE_70: &str = " .\"`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
-const gamma: f64 = 2.2;
+const GAMMA: f64 = 2.2;
+
+const LOGO: &str = r"
+                    _ _
+ _ __ __ _ ___  ___(_|_)
+| '__/ _` / __|/ __| | |
+| | | (_| \__ \ (__| | |
+|_|  \__,_|___/\___|_|_|
+by Avery Wagar (@ajmwagar)
+";
 
 type RasciiOutput = Vec<Vec<(char, RasciiColor)>>;
 
@@ -21,23 +30,23 @@ enum RasciiColor {
 impl RasciiColor {
     fn to_grayscale(&self) -> u8 {
         /*
-         * Rlin = R^gamma,  Glin = G^gamma,  Blin = B^gamma
-         * Y = .2126 * R^gamma + .7152 * G^gamma + .0722 * B^gamma
+         * Rlin = R^GAMMA,  Glin = G^GAMMA,  Blin = B^GAMMA
+         * Y = .2126 * R^GAMMA + .7152 * G^GAMMA + .0722 * B^GAMMA
          * L* = 116 * Y ^ 1/3 - 16
          */
 
         match self {
             RasciiColor::RGB(r,g,b) => {
-                let rlin = (*r as f64).powf(gamma);
-                let blin = (*b as f64).powf(gamma);
-                let glin = (*g as f64).powf(gamma);
+                let rlin = (*r as f64).powf(GAMMA);
+                let blin = (*b as f64).powf(GAMMA);
+                let glin = (*g as f64).powf(GAMMA);
 
                 let y = (0.2126 * rlin) + (0.7152 * glin) + (0.0722 * blin);
 
                 return (116.0 * y.powf((1.0 / 3.0)) - 16.0) as u8
             }
-            RasciiColor::Grayscale(L) => {
-                *L
+            RasciiColor::Grayscale(l) => {
+                *l
             }
         }
 
@@ -56,35 +65,52 @@ struct Opt {
     #[structopt(short = "b", long = "braille")]
     braille: bool,
 
-    #[structopt(short = "w", long = "width", default_value = "40")]
+    #[structopt(short = "w", long = "width", default_value = "80")]
     /// Width in characters of the output
     width: u32,
 
     #[structopt(short = "d", long = "depth", default_value = "70")]
+    /// Lumince depth to use. (Number of unique characters)
     depth: u8,
 
     #[structopt(short = "h", long = "height")]
-    /// height in characters of the output
+    /// Height in characters of the output
     height: Option<u32>,
 
     #[structopt(long = "bg")]
+    /// Enable coloring of background chars
     bg: bool,
 
-    /// image to process
+    /// Path of image file to convert
     #[structopt(name = "IMAGE", parse(from_os_str))]
     image: PathBuf,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
-    // let mut stdout = StandardStream::stdout(ColorChoice::Auto);
-    
+
+    // LOGO
+    stdout.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
+    writeln!(&mut stdout, "{}", LOGO)?;
+    stdout.set_color(ColorSpec::new().set_fg(Some(Color::White)))?;
+
     let opt = Opt::from_args();
 
-    let mut rascii = Rascii::from_opt(&opt)?;
+    stdout.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
 
+    // Load image
+    write!(&mut stdout, "Loading Image...")?;
+    let mut rascii = Rascii::from_opt(&opt)?;
+    writeln!(&mut stdout, "   Done!")?;
+
+    // Convert image to ASCII
+    write!(&mut stdout, "ASCIIfying...")?;
     let output = rascii.run()?;
+    writeln!(&mut stdout, "   Done!\n")?;
+
+    stdout.flush()?;
+
+    stdout.set_color(ColorSpec::new().set_fg(Some(Color::White)))?;
 
     for row in output {
         for col in row {
@@ -172,8 +198,8 @@ impl Rascii {
                             color = RasciiColor::RGB(pixel_data[0], pixel_data[1], pixel_data[2])
                         }
                         else {
-                            let Y = RasciiColor::RGB(pixel_data[0], pixel_data[1], pixel_data[2]).to_grayscale();
-                            color = RasciiColor::Grayscale(Y as u8);
+                            let y = RasciiColor::RGB(pixel_data[0], pixel_data[1], pixel_data[2]).to_grayscale();
+                            color = RasciiColor::Grayscale(y as u8);
                         }
 
                         tile_pixel_data.push(color);
@@ -185,17 +211,17 @@ impl Rascii {
                 let ascii_char: char;
                 if self.color {
                     avg = RasciiColor::RGB(
-                       (tile_pixel_data.iter().fold(0usize, |sum, x| {sum + match x { RasciiColor::RGB(r,g,b)=> *r as usize, _ => 0 }}) / tile_pixel_data.len()) as u8,
-                       (tile_pixel_data.iter().fold(0usize, |sum, x| {sum + match x { RasciiColor::RGB(r,g,b)=> *g as usize, _ => 0 }}) / tile_pixel_data.len()) as u8,
-                       (tile_pixel_data.iter().fold(0usize, |sum, x| {sum + match x { RasciiColor::RGB(r,g,b)=> *b as usize, _ => 0 }}) / tile_pixel_data.len()) as u8
+                       (tile_pixel_data.iter().fold(0usize, |sum, x| {sum + match x { RasciiColor::RGB(r,_,_)=> *r as usize, _ => 0 }}) / tile_pixel_data.len()) as u8,
+                       (tile_pixel_data.iter().fold(0usize, |sum, x| {sum + match x { RasciiColor::RGB(_,g,_)=> *g as usize, _ => 0 }}) / tile_pixel_data.len()) as u8,
+                       (tile_pixel_data.iter().fold(0usize, |sum, x| {sum + match x { RasciiColor::RGB(_,_,b)=> *b as usize, _ => 0 }}) / tile_pixel_data.len()) as u8
                     );
                     if self.depth > 10 {
-                        let index = ((avg.to_grayscale() as f64/ 255.0) * 67.0);
+                        let index = (avg.to_grayscale() as f64/ 255.0) * 67.0;
                         let chars = GSCALE_70.chars().collect::<Vec<char>>();
                         ascii_char = chars[index as usize];
                     }
                     else {
-                        let index = ((avg.to_grayscale() as f64/ 255.0) * 9.0);
+                        let index = (avg.to_grayscale() as f64/ 255.0) * 9.0;
                         ascii_char = GSCALE_10[index as usize];
                     }
                 }
@@ -206,12 +232,12 @@ impl Rascii {
                         _ => 0
                     };
                     if self.depth > 10 {
-                        let index = ((x as f64/ 255.0) * 67.0);
+                        let index = (x as f64/ 255.0) * 67.0;
                         let chars = GSCALE_70.chars().collect::<Vec<char>>();
                         ascii_char = chars[index as usize];
                     }
                     else {
-                        let index = ((x as f64/ 255.0) * 9.0);
+                        let index = (x as f64/ 255.0) * 9.0;
                         ascii_char = GSCALE_10[index as usize];
                     }
                 }
