@@ -13,3 +13,7 @@ Image => ASCII ART
 # Prints out colorful ascii art based on input image
 rascii ./examples/testdog.jpeg --color
 ```
+
+![doggo](./examples/dog.png)
+
+
