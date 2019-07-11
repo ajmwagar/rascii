@@ -4,7 +4,7 @@ description = "Image to ASCII Art converter"
 readme = "README.md"
 repository = "https://github.com/ajmwagar/rascii"
 license = "MIT"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Avery Wagar <ajmw.subs@gmail.com>"]
 edition = "2018"
 

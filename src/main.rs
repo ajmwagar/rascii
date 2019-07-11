@@ -156,7 +156,7 @@ impl Rascii {
     pub fn from_opt(opt: &Opt) -> Result<Self, Box<dyn Error>> {
         let im: DynamicImage = image::open(&Path::new(&opt.image))?;
         let im = im.to_rgb();
-        let aspect = im.width() as f64 / im.height() as f64;
+        let aspect = im.height() as f64 / im.width() as f64;
         let height = match opt.height {
             Some(height) => height,
             None => (opt.width as f64 * aspect) as u32
